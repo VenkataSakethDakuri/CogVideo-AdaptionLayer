@@ -46,7 +46,7 @@ class CogVideoXI2VLoraTrainer(Trainer):
             model_path, subfolder="scheduler"
         )
         
-        # Add emotion enhancement module
+        # Add emotion enhancement module # new
         num_layers = len(components.transformer.transformer_blocks)
         hidden_size = components.transformer.transformer_blocks[0].attn1.to_q.in_features
         components.emotion_enhancer = EmotionEnhancementModule(
@@ -202,12 +202,13 @@ class CogVideoXI2VLoraTrainer(Trainer):
             if self.state.transformer_config.ofs_embed_dim is None
             else latent.new_full((1,), fill_value=2.0)
         )
+        #new
         # Get the current prompt for emotion enhancement (using first sample in batch)
         if hasattr(self.state, 'current_prompts') and len(self.state.current_prompts) > 0:
             self.current_prompt = self.state.current_prompts[0]
         else:
             self.current_prompt = ""  # Default if no prompt available
-
+        #new
         # Apply transformer with emotion enhancement
         predicted_noise = self.components.transformer(
             hidden_states=latent_img_noisy,
@@ -233,6 +234,7 @@ class CogVideoXI2VLoraTrainer(Trainer):
 
         return loss
 
+    #new
     @override
     def validation_step(
         self, eval_data: Dict[str, Any], pipe: CogVideoXImageToVideoPipeline
@@ -286,7 +288,7 @@ class CogVideoXI2VLoraTrainer(Trainer):
         )
 
         return freqs_cos, freqs_sin
-
+    #new
     def setup_emotion_enhancement_hooks(self):
         """Set up hooks to apply emotion enhancement during inference"""
         # Store original forward methods
@@ -325,7 +327,7 @@ class CogVideoXI2VLoraTrainer(Trainer):
                     block.forward = make_forward_with_emotion(
                         self.original_forward_methods[block], layer_idx
                     )
-
+    #new
     @override
     def on_fit_start(self):
         super().on_fit_start()
@@ -334,7 +336,7 @@ class CogVideoXI2VLoraTrainer(Trainer):
         
         # Store prompt from each batch for emotion enhancement
         self.state.current_prompts = []
-
+    #new
     @override
     def get_train_dataloader(self):
         dataloader = super().get_train_dataloader()
@@ -350,7 +352,7 @@ class CogVideoXI2VLoraTrainer(Trainer):
         dataloader.collate_fn = collate_with_prompts
         return dataloader
 
-
+#new
 class EmotionEnhancementModule(nn.Module):
     """
     Module that enhances emotional expressions in human subjects within videos.

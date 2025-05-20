@@ -29,27 +29,16 @@ class CogVideoXI2VLoraTrainer(Trainer):
         model_path = str(self.args.model_path)
 
         components.pipeline_cls = CogVideoXImageToVideoPipeline
-
         components.tokenizer = AutoTokenizer.from_pretrained(model_path, subfolder="tokenizer")
-
-        components.text_encoder = T5EncoderModel.from_pretrained(
-            model_path, subfolder="text_encoder"
-        )
-
-        components.transformer = CogVideoXTransformer3DModel.from_pretrained(
-            model_path, subfolder="transformer"
-        )
-
+        components.text_encoder = T5EncoderModel.from_pretrained(model_path, subfolder="text_encoder")
+        components.transformer = CogVideoXTransformer3DModel.from_pretrained(model_path, subfolder="transformer")
         components.vae = AutoencoderKLCogVideoX.from_pretrained(model_path, subfolder="vae")
-
-        components.scheduler = CogVideoXDPMScheduler.from_pretrained(
-            model_path, subfolder="scheduler"
-        )
+        components.scheduler = CogVideoXDPMScheduler.from_pretrained(model_path, subfolder="scheduler")
         
-        # Add emotion enhancement module
+        # Instead of adding to components, store the emotion enhancer as an instance variable
         num_layers = len(components.transformer.transformer_blocks)
         hidden_size = components.transformer.transformer_blocks[0].attn1.to_q.in_features
-        components.emotion_enhancer = EmotionEnhancementModule(
+        self.emotion_enhancer = EmotionEnhancementModule(
             hidden_size=hidden_size,
             num_layers=num_layers,
             adaptation_factor=0.3,  # Can be configured via arguments
@@ -312,11 +301,11 @@ class CogVideoXI2VLoraTrainer(Trainer):
                             prompt = getattr(self, 'current_prompt', '')
                             
                             # Apply emotion enhancement
-                            if hasattr(self.components, 'emotion_enhancer'):
-                                hidden_states = self.components.emotion_enhancer.enhance_emotions(
+                            if hasattr(self, 'emotion_enhancer'):  # Changed from components.emotion_enhancer
+                                hidden_states = self.emotion_enhancer.enhance_emotions(
                                     hidden_states, prompt, layer_idx
                                 )
-                            
+                        
                             return hidden_states
                         
                         return forward_with_emotion
@@ -500,4 +489,4 @@ class EmotionEnhancementModule(nn.Module):
         return enhanced_states
 
 
-register("cogvideox-i2v", "lora", CogVideoXI2VLoraTrainer)
+register("cogvideox1.5-i2v", "lora", CogVideoXI2VLoraTrainer)
